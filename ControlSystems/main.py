@@ -2,12 +2,12 @@ from dataclasses import dataclass
 import numpy as np
 from numpy import float64
 import numpy.typing as npt
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABC, ABCMeta
 from numpy.typing import NDArray
 from ControlSystems.constants import G
 
-class ControlSystem(ABC):
-    """制御対象となるシステムを表す抽象クラス"""
+class ControlSystem(metaclass=ABCMeta):
+    """制御対象となるシステムを表すクラス"""
 
     # @abstractmethod
     # def state(self, t : float64) -> NDArray[float64]:
@@ -29,20 +29,28 @@ class ControlSystem(ABC):
 
     @abstractmethod
     def ssmodel(self, t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
-        """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。"""
+        """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。
+        時不変なシステムなら引数`t`は使用しないはず。
+        """
         pass
 
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
 
+    def __init__(self, J = 0.3, M = 1.5, len = 0.7, μ = 0.1):
+        self.J = J
+        self.M = M
+        self.l = len
+        self.μ = μ
+
     @property
     def constants(self):
         return {
-            "inertia_moment": 2.0, # アームの回転軸の周りの慣性モーメント[kg⬝m^2]
-            "mass": 1.0, # アームの質量[kg]
-            "viscous_friction": 0.1, # 粘性摩擦係数[Ns/m]
-            "length": 1.0, # アームの重心までの長さ[m]
+            "inertia_moment": self.J, # アームの回転軸の周りの慣性モーメント[kg⬝m²]
+            "mass": self.M, # アームの質量[kg]
+            "viscous_friction": self.l, # 粘性摩擦係数[Ns/m]
+            "length": self.l, # アームの重心までの長さ[m]
         }
 
     @property
@@ -66,8 +74,45 @@ class VerticalDrivingArm(ControlSystem):
         return np.array([new_θ, new_dθ])
 
 
+class TwoTanks(ControlSystem):
+    """直列に結合した2つのタンク。「はじめての現代制御理論」の1.5節参照。
+    ただし、ここで示すモデルは既に線形化されている。
+    """
 
+    def __init__(self, C1 = 1.0, C2 = 2.0, R1 = 0.1, R2 = 0.1):
+        self.C1 = C1
+        self.C2 = C2
+        self.R1 = R1
+        self.R2 = R2
 
+    @property
+    def constants(self):
+        return {
+            "cross_sectional_area_1": self.C1, # タンク1の断面積[m²]
+            "cross_sectional_area_2": self.C2, # タンク2の断面積[m²]
+            "outlet_resistance_1": self.R1, # タンク1の出口抵抗 [s/m²]
+            "outlet_resistance_2": self.R2, # タンク2の出口抵抗 [s/m²]
+        }
+
+    @property
+    def state_dict(self):
+        return {
+            "water_level_1": 0, # タンク1の水位[m]
+            "water_level_2": 1  # タンク2の水位[m]
+        }
+
+    def ssmodel(self, _t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
+        C1 = self.constants["cross_sectional_area_1"]
+        C2 = self.constants["cross_sectional_area_2"]
+        R1 = self.constants["outlet_resistance_1"]
+        R2 = self.constants["outlet_resistance_2"]
+
+        h1 = self.state_dict["water_level_1"]
+        h2 = self.state_dict["water_level_2"]
+
+        new_h1 = -(h1 / (R1 * C1)) + u / C1
+        new_h2 = (h1 / (R1 * C2)) - (h2 / (R2 * C2))
+        return np.array([new_h1, new_h2])
 
 # class CartPole(ControlSystem):
 #     """倒立振子"""
@@ -90,3 +135,8 @@ class VerticalDrivingArm(ControlSystem):
 
 #     state_dict : dict[str, float]
 #     """状態の名前と、その `ControlSystem.state` におけるインデックスの対応。"""
+
+if __name__ == "__main__":
+    arm = VerticalDrivingArm()
+    print(arm.constants)
+    print(arm.state_dict)
