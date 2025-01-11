@@ -1,7 +1,6 @@
 import numpy as np
 
-from ControlSystems.constants import G
-from ControlSystems.typing import Time, State
+from ControlSystems.typing import Time
 from ControlSystems.main import ControlSystem
 from numpy import float64
 from numpy.typing import NDArray
