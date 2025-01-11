@@ -31,15 +31,10 @@ class TwoTanks(ControlSystem):
 
     @property
     def constant_names(self):
-        return {
-            "C1": self.C1,
-            "C2": self.C2,
-            "R1": self.R1,
-            "R2": self.R2,
-        }
+        return ["C1", "C2", "R1", "R2"]
 
     @property
-    def states(self):
+    def state_names(self):
         return ["h1", "h2"]
 
     def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
