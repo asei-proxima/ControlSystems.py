@@ -32,23 +32,40 @@ class ControlSystem(ABC):
         """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。
         時不変なシステムなら引数`t`は使用しないはず。
 
-        ここでは１入力系だけを考えているので`u`はスカラー。
+        * ここでは１入力系だけを考えているので`u`はスカラー。
+        * この時点で線形化してはいけなくて、ここでは正確なモデルを使用してください。
         """
         pass
 
-@dataclass
-class Simulator(ABC):
+class Simulator():
     """制御対象のシミュレーションを行うクラス"""
 
+    def __init__(self, system : ControlSystem, initial_state : NDArray[float64], control_time_series : NDArray[float64]):
+        self.system = system
+
+        assert len(initial_state) == len(system.state_dict), "初期状態の次元がシステムの要求するものと異なります。"
+        self.initial_state = initial_state
+
+        # 制御周期が一定であることの確認
+        n = len(control_time_series)
+        i, j = np.random.choice(n-1, size=2, replace=False)
+        period_i = control_time_series[i+1] - control_time_series[i]
+        period_j = control_time_series[j+1] - control_time_series[j]
+        assert np.abs(period_i - period_j) < 1e-6, "control_time_series は増加する等差数列でなければいけません。"
+        self.control_time_series = control_time_series
+
+    # TODO: メソッドに書き換える
     system : ControlSystem
     """制御対象となるシステム"""
 
     # control_period : float64
     # """制御周期[s]"""
 
+    # TODO: メソッドに書き換える
     initial_state : NDArray[float64]
     """初期状態"""
 
+    # TODO: メソッドに書き換える
     control_time_series : NDArray[float64]
     """シミュレーションで使用する時刻の配列。各値の間隔は一定であることが期待される。"""
 
@@ -68,6 +85,21 @@ class Simulator(ABC):
         t : float64 = self.control_time_series[n]
         x_next = x + self.system.ssmodel(t, x, u) * self.control_period
         return x_next
+
+    def run(self, u_series : NDArray[float64]) -> NDArray[float64]:
+        """シミュレーションを実行する。
+
+        Parameters:
+        * u_series: 各ステップでの入力を格納した配列。
+        """
+        # TODO: このコードが本当に正しいのか確認する。
+        x_series = np.zeros((len(u_series), len(self.initial_state)))
+        x_series[0] = self.initial_state
+
+        for n in range(len(u_series) - 1):
+            x_series[n + 1] = self.next_step_euler(n, u_series[n], x_series[n])
+
+        return x_series
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
