@@ -6,7 +6,7 @@ from abc import abstractmethod, ABC, ABCMeta
 from numpy.typing import NDArray
 from ControlSystems.constants import G
 
-class ControlSystem(metaclass=ABCMeta):
+class ControlSystem(ABC):
     """制御対象となるシステムを表すクラス"""
 
     # @abstractmethod
@@ -31,9 +31,43 @@ class ControlSystem(metaclass=ABCMeta):
     def ssmodel(self, t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
         """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。
         時不変なシステムなら引数`t`は使用しないはず。
+
+        ここでは１入力系だけを考えているので`u`はスカラー。
         """
         pass
 
+@dataclass
+class Simulator(ABC):
+    """制御対象のシミュレーションを行うクラス"""
+
+    system : ControlSystem
+    """制御対象となるシステム"""
+
+    # control_period : float64
+    # """制御周期[s]"""
+
+    initial_state : NDArray[float64]
+    """初期状態"""
+
+    control_time_series : NDArray[float64]
+    """シミュレーションで使用する時刻の配列。各値の間隔は一定であることが期待される。"""
+
+    @property
+    def control_period(self) -> float64:
+        """制御周期[s]"""
+        return self.control_time_series[1] - self.control_time_series[0]
+
+    def next_step_euler(self, n : int, u : float64, x : NDArray) -> NDArray[float64]:
+        """オイラー法によって「次の状態」を計算する。
+
+        Parameters:
+        * n: ステップ数。ゼロから始まる。
+        * u: nステップ目における入力。
+        * x: nステップ目における状態。
+        """
+        t : float64 = self.control_time_series[n]
+        x_next = x + self.system.ssmodel(t, x, u) * self.control_period
+        return x_next
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
