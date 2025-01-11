@@ -26,19 +26,13 @@ class VerticalDrivingArm(ControlSystem):
     μ : float64
     """粘性摩擦係数[Ns/m]"""
 
-    # θ : float64
-    # """アームの角度（垂直下向きから時計回り）[rad]"""
-
-    # dθ : float64
-    # """アームの角速度 [rad/s]"""
-
     @property
     def constant_names(self) -> list[str]:
         return ["J", "M", "l", "μ"]
 
     @property
     def state_names(self):
-        return ["θ", "dθ"]
+        return ["θ", "ω"]
 
     def ssmodel(self, _t : Time, x : State, u : float64) -> State:
         J = self.J
@@ -47,10 +41,10 @@ class VerticalDrivingArm(ControlSystem):
         μ = self.μ
 
         θ_index = self.state_names.index("θ")
-        dθ_index = self.state_names.index("dθ")
+        ω_index = self.state_names.index("ω")
         θ = x[θ_index]
-        dθ = x[dθ_index]
+        ω = x[ω_index]
 
-        new_θ = dθ
-        new_dθ = (- μ * dθ - M * G * l * np.sin(θ) + u) / J
-        return np.array([new_θ, new_dθ])
+        dθ = ω
+        dω = (- μ * ω - M * G * l * np.sin(θ) + u) / J
+        return np.array([dθ, dω])

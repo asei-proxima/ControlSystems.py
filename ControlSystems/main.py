@@ -1,11 +1,10 @@
 import numpy as np
-import numpy.typing as npt
+import matplotlib.pyplot as plt
 
 from dataclasses import dataclass
 from numpy import float64
-from abc import abstractmethod, ABC, ABCMeta
+from abc import abstractmethod, ABC
 from numpy.typing import NDArray
-from ControlSystems.constants import G
 from ControlSystems.typing import Time, State
 
 def constant_param(func):
@@ -15,12 +14,6 @@ def constant_param(func):
 
 class ControlSystem(ABC):
     """制御対象となるシステムを表すクラス"""
-
-    # @abstractmethod
-    # def state(self, t : Time) -> NDArray[float64]:
-    #     """観測・介入しようとしている状態の定義。
-    #     このメソッドは時刻 t を受け取ってその時点での状態をすべて返す。"""
-    #     pass
 
     @property
     @abstractmethod
@@ -66,6 +59,37 @@ class SystemController(ABC):
         pass
 
 
+@dataclass
+class SimulationResult():
+    """シミュレーションの結果"""
+
+    system : ControlSystem
+    """制御対象となるシステム"""
+
+    time_series : NDArray[Time]
+    """シミュレーションで使用した時刻の配列。各値の間隔は一定であることが期待される。"""
+
+    result : NDArray[float64]
+    """シミュレーションの結果。各行が各時刻における状態を表す。"""
+
+    def phase(self, x : str, y : str) -> tuple[plt.Figure, plt.Axes]:
+        """シミュレーション結果から、状態を2つ選んで、その時系列発展をプロットする"""
+        fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+
+        x_index = self.system.state_names.index(x)
+        y_index = self.system.state_names.index(y)
+
+        x_series = self.result[:, x_index]
+        y_series = self.result[:, y_index]
+        time_series = self.time_series
+
+        ax.scatter(x=x_series, y=y_series, cmap="inferno", c=time_series)
+        ax.set_xlabel(x)
+        ax.set_ylabel(y)
+        ax.set_title("Phase plot of the system")
+        return fig, ax
+
+
 class SystemSimulator():
     """制御対象のシミュレーションを行うクラス"""
 
@@ -108,7 +132,7 @@ class SystemSimulator():
         x_next = x + self.system.ssmodel(t, x, u) * self.time_interval
         return x_next
 
-    def run(self) -> NDArray[float64]:
+    def run(self) -> SimulationResult:
         """シミュレーションを実行する。
 
         Parameters:
@@ -125,27 +149,5 @@ class SystemSimulator():
             u = controller.control(t, x_series[n])
             x_series[n + 1] = self.euler(n, u, x_series[n])
 
-        return x_series
-
-
-# class CartPole(ControlSystem):
-#     """倒立振子"""
-
-#     @property
-#     def state_list(self):
-#         return ["position", "velocity", "angle", "angular_velocity"]
-
-#     def ssmodel(self, t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
-
-
-# @dataclass
-# class ControlSystem:
-#     """制御対象となるシステム"""
-
-#     state : np.ndarray[float]
-#     """観測・介入しようとしている状態。
-#     float の1配列であることが期待される。
-#     """
-
-#     state_dict : dict[str, float]
-#     """状態の名前と、その `ControlSystem.state` におけるインデックスの対応。"""
+        result = SimulationResult(self.system, self.time_series, x_series)
+        return result

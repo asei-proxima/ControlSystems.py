@@ -32,10 +32,10 @@ class TwoTanks(ControlSystem):
     @property
     def constant_names(self):
         return {
-            "C1": self.C1, # タンク1の断面積[m²]
-            "C2": self.C2, # タンク2の断面積[m²]
-            "R1": self.R1, # タンク1の出口抵抗 [s/m²]
-            "R2": self.R2, # タンク2の出口抵抗 [s/m²]
+            "C1": self.C1,
+            "C2": self.C2,
+            "R1": self.R1,
+            "R2": self.R2,
         }
 
     @property
@@ -48,8 +48,8 @@ class TwoTanks(ControlSystem):
         R1 = self.R1
         R2 = self.R2
 
-        h1_index = self.states.index("h1")
-        h2_index = self.states.index("h2")
+        h1_index = self.state_names.index("h1")
+        h2_index = self.state_names.index("h2")
         h1 = x[h1_index]
         h2 = x[h2_index]
 
