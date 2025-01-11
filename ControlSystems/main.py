@@ -5,18 +5,19 @@ import numpy.typing as npt
 from abc import abstractmethod, ABC, ABCMeta
 from numpy.typing import NDArray
 from ControlSystems.constants import G
+from ControlSystems.typing import Time, State
 
 class ControlSystem(ABC):
     """制御対象となるシステムを表すクラス"""
 
     # @abstractmethod
-    # def state(self, t : float64) -> NDArray[float64]:
+    # def state(self, t : Time) -> NDArray[float64]:
     #     """観測・介入しようとしている状態の定義。
     #     このメソッドは時刻 t を受け取ってその時点での状態をすべて返す。"""
     #     pass
 
     @property
-    @abstractmethod
+    # @abstractmethod このメソッドを実装することを矯正してもあまり子クラスにとっては嬉しくなさそう
     def constants(self) -> dict[str, float64]:
         """システムの定数の値を格納する辞書"""
         pass
@@ -27,8 +28,13 @@ class ControlSystem(ABC):
         """システムの状態が、`x : NDArray` においてどのインデックスに対応するかを格納する辞書"""
         pass
 
+    @property
+    def state_number(self) -> int:
+        """状態の数"""
+        return len(self.state_dict)
+
     @abstractmethod
-    def ssmodel(self, t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
+    def ssmodel(self, t : Time, x : State, u : float64) -> State:
         """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。
         時不変なシステムなら引数`t`は使用しないはず。
 
@@ -37,44 +43,46 @@ class ControlSystem(ABC):
         """
         pass
 
-class Simulator():
-    """制御対象のシミュレーションを行うクラス"""
-
-    def __init__(self, system : ControlSystem, initial_state : NDArray[float64], control_time_series : NDArray[float64]):
+class SystemController(ABC):
+    """状態から制御入力を決定する方法を表すクラス"""
+    def __init__(self, system : ControlSystem):
         self.system = system
 
-        assert len(initial_state) == len(system.state_dict), "初期状態の次元がシステムの要求するものと異なります。"
-        self.initial_state = initial_state
-
-        # 制御周期が一定であることの確認
-        n = len(control_time_series)
-        i, j = np.random.choice(n-1, size=2, replace=False)
-        period_i = control_time_series[i+1] - control_time_series[i]
-        period_j = control_time_series[j+1] - control_time_series[j]
-        assert np.abs(period_i - period_j) < 1e-6, "control_time_series は増加する等差数列でなければいけません。"
-        self.control_time_series = control_time_series
-
-    # TODO: メソッドに書き換える
     system : ControlSystem
     """制御対象となるシステム"""
 
-    # control_period : float64
-    # """制御周期[s]"""
+    @abstractmethod
+    def control(self, t : Time, x : State) -> float64:
+        """制御入力を計算する。"""
+        pass
 
-    # TODO: メソッドに書き換える
-    initial_state : NDArray[float64]
+class SystemSimulator():
+    """制御対象のシミュレーションを行うクラス"""
+
+    def __init__(self, system : ControlSystem, initial_state : State, time_series : NDArray[float64]):
+        self.system = system
+
+        assert len(initial_state) == len(system.state_dict), "初期状態の次元がシステムの要求するものと異なります。"
+        assert isinstance(initial_state, np.ndarray), "initial_state は numpy.ndarray 型でなければなりません"
+        self.initial_state = initial_state
+
+        self.time_series = time_series
+
+    system : ControlSystem
+    """制御対象となるシステム"""
+
+    initial_state : State
     """初期状態"""
 
-    # TODO: メソッドに書き換える
-    control_time_series : NDArray[float64]
+    time_series : NDArray[float64]
     """シミュレーションで使用する時刻の配列。各値の間隔は一定であることが期待される。"""
 
     @property
-    def control_period(self) -> float64:
-        """制御周期[s]"""
-        return self.control_time_series[1] - self.control_time_series[0]
+    def time_interval(self) -> float64:
+        """シミュレーション周期[s]"""
+        return self.time_series[1] - self.time_series[0]
 
-    def next_step_euler(self, n : int, u : float64, x : NDArray) -> NDArray[float64]:
+    def euler(self, n : int, u : float64, x : State) -> State:
         """オイラー法によって「次の状態」を計算する。
 
         Parameters:
@@ -82,22 +90,26 @@ class Simulator():
         * u: nステップ目における入力。
         * x: nステップ目における状態。
         """
-        t : float64 = self.control_time_series[n]
-        x_next = x + self.system.ssmodel(t, x, u) * self.control_period
+        t = self.time_series[n]
+        x_next = x + self.system.ssmodel(t, x, u) * self.time_interval
         return x_next
 
-    def run(self, u_series : NDArray[float64]) -> NDArray[float64]:
+    def run(self, controller : SystemController) -> NDArray[float64]:
         """シミュレーションを実行する。
 
         Parameters:
-        * u_series: 各ステップでの入力を格納した配列。
+        * u_series: 各ステップでの入力を格納した配列。最後の要素は無視される。
         """
-        # TODO: このコードが本当に正しいのか確認する。
-        x_series = np.zeros((len(u_series), len(self.initial_state)))
+        assert self.system == controller.system, "制御対象のシステムが制御器とシミュレータで一致しません。"
+
+        x_series = np.zeros((len(self.time_series), len(self.initial_state)))
         x_series[0] = self.initial_state
 
-        for n in range(len(u_series) - 1):
-            x_series[n + 1] = self.next_step_euler(n, u_series[n], x_series[n])
+        for n, t in enumerate(self.time_series):
+            if n == len(self.time_series) - 1:
+                break
+            u = controller.control(t, x_series[n])
+            x_series[n + 1] = self.euler(n, u, x_series[n])
 
         return x_series
 
@@ -110,30 +122,48 @@ class VerticalDrivingArm(ControlSystem):
         self.l = len
         self.μ = μ
 
+    J : float64
+    """アームの回転軸の周りの慣性モーメント[kg⬝m²]"""
+
+    M : float64
+    """アームの質量[kg]"""
+
+    l : float64
+    """アームの重心までの長さ[m]"""
+
+    μ : float64
+    """粘性摩擦係数[Ns/m]"""
+
+    # θ : float64
+    # """アームの角度（垂直下向きから時計回り）[rad]"""
+
+    # dθ : float64
+    # """アームの角速度 [rad/s]"""
+
     @property
     def constants(self):
         return {
-            "inertia_moment": self.J, # アームの回転軸の周りの慣性モーメント[kg⬝m²]
-            "mass": self.M, # アームの質量[kg]
-            "viscous_friction": self.l, # 粘性摩擦係数[Ns/m]
-            "length": self.l, # アームの重心までの長さ[m]
+            "J": self.J,
+            "M": self.M,
+            "l": self.l,
+            "μ": self.μ,
         }
 
     @property
     def state_dict(self):
         return {
-            "angle" : 0, # アームの角度（垂直下向きから時計回り）[rad]
-            "angular_velocity" : 1  # 角速度 [rad/s]
+            "θ" : 0, # アームの角度（垂直下向きから時計回り）[rad]
+            "dθ" : 1  # 角速度 [rad/s]
         }
 
-    def ssmodel(self, _t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
-        J = self.constants["inertia_moment"]
-        M = self.constants["mass"]
-        l = self.constants["length"]  # noqa: E741
-        μ = self.constants["viscous_friction"]
+    def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
+        J = self.J
+        M = self.M
+        l = self.l  # noqa: E741
+        μ = self.μ
 
-        θ = self.state_dict["angle"]
-        dθ = self.state_dict["angular_velocity"]
+        θ = self.state_dict["θ"]
+        dθ = self.state_dict["dθ"]
 
         new_θ = dθ
         new_dθ = (- μ * dθ - M * G * l * np.sin(θ) + u) / J
@@ -167,7 +197,7 @@ class TwoTanks(ControlSystem):
             "water_level_2": 1  # タンク2の水位[m]
         }
 
-    def ssmodel(self, _t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
+    def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
         C1 = self.constants["cross_sectional_area_1"]
         C2 = self.constants["cross_sectional_area_2"]
         R1 = self.constants["outlet_resistance_1"]
@@ -176,9 +206,9 @@ class TwoTanks(ControlSystem):
         h1 = self.state_dict["water_level_1"]
         h2 = self.state_dict["water_level_2"]
 
-        new_h1 = -(h1 / (R1 * C1)) + u / C1
-        new_h2 = (h1 / (R1 * C2)) - (h2 / (R2 * C2))
-        return np.array([new_h1, new_h2])
+        dh1 = -(h1 / (R1 * C1)) + u / C1
+        dh2 = (h1 / (R1 * C2)) - (h2 / (R2 * C2))
+        return np.array([dh1, dh2])
 
 # class CartPole(ControlSystem):
 #     """倒立振子"""
@@ -187,7 +217,7 @@ class TwoTanks(ControlSystem):
 #     def state_list(self):
 #         return ["position", "velocity", "angle", "angular_velocity"]
 
-#     def ssmodel(self, t : float64, x : NDArray[float64], u : float64) -> NDArray[float64]:
+#     def ssmodel(self, t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
 
 
 # @dataclass
