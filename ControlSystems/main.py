@@ -1,11 +1,17 @@
-from dataclasses import dataclass
 import numpy as np
-from numpy import float64
 import numpy.typing as npt
+
+from dataclasses import dataclass
+from numpy import float64
 from abc import abstractmethod, ABC, ABCMeta
 from numpy.typing import NDArray
 from ControlSystems.constants import G
 from ControlSystems.typing import Time, State
+
+def constant_param(func):
+    """制御システムの定数パラメータを表すデコレータ"""
+    func.is_constant = True  # 識別用の属性を追加
+    return property(func)
 
 class ControlSystem(ABC):
     """制御対象となるシステムを表すクラス"""
@@ -17,21 +23,26 @@ class ControlSystem(ABC):
     #     pass
 
     @property
-    # @abstractmethod このメソッドを実装することを矯正してもあまり子クラスにとっては嬉しくなさそう
-    def constants(self) -> dict[str, float64]:
-        """システムの定数の値を格納する辞書"""
+    @abstractmethod
+    def constant_names(self) -> list[str]:
+        """システムの定数の名前のリスト"""
         pass
 
     @property
+    def constants(self) -> dict[str, float64]:
+        """システムの定数の値の辞書"""
+        return {name: getattr(self, name) for name in self.constant_names}
+
+    @property
     @abstractmethod
-    def state_dict(self) -> dict[str, int]:
-        """システムの状態が、`x : NDArray` においてどのインデックスに対応するかを格納する辞書"""
+    def state_names(self) -> list[str]:
+        """システムの状態の名前のリスト"""
         pass
 
     @property
     def state_number(self) -> int:
         """状態の数"""
-        return len(self.state_dict)
+        return len(self.state_names)
 
     @abstractmethod
     def ssmodel(self, t : Time, x : State, u : float64) -> State:
@@ -45,8 +56,6 @@ class ControlSystem(ABC):
 
 class SystemController(ABC):
     """状態から制御入力を決定する方法を表すクラス"""
-    def __init__(self, system : ControlSystem):
-        self.system = system
 
     system : ControlSystem
     """制御対象となるシステム"""
@@ -56,13 +65,15 @@ class SystemController(ABC):
         """制御入力を計算する。"""
         pass
 
+
 class SystemSimulator():
     """制御対象のシミュレーションを行うクラス"""
 
-    def __init__(self, system : ControlSystem, initial_state : State, time_series : NDArray[float64]):
-        self.system = system
+    def __init__(self, controller: SystemController, initial_state : State, time_series : NDArray[Time]):
+        self.controller = controller
+        self.system = controller.system
 
-        assert len(initial_state) == len(system.state_dict), "初期状態の次元がシステムの要求するものと異なります。"
+        assert len(initial_state) == len(self.system.state_names), "初期状態の次元がシステムの要求するものと異なります。"
         assert isinstance(initial_state, np.ndarray), "initial_state は numpy.ndarray 型でなければなりません"
         self.initial_state = initial_state
 
@@ -71,14 +82,17 @@ class SystemSimulator():
     system : ControlSystem
     """制御対象となるシステム"""
 
+    controller : SystemController
+    """制御器"""
+
     initial_state : State
     """初期状態"""
 
-    time_series : NDArray[float64]
+    time_series : NDArray[Time]
     """シミュレーションで使用する時刻の配列。各値の間隔は一定であることが期待される。"""
 
     @property
-    def time_interval(self) -> float64:
+    def time_interval(self) -> Time:
         """シミュレーション周期[s]"""
         return self.time_series[1] - self.time_series[0]
 
@@ -94,13 +108,13 @@ class SystemSimulator():
         x_next = x + self.system.ssmodel(t, x, u) * self.time_interval
         return x_next
 
-    def run(self, controller : SystemController) -> NDArray[float64]:
+    def run(self) -> NDArray[float64]:
         """シミュレーションを実行する。
 
         Parameters:
         * u_series: 各ステップでの入力を格納した配列。最後の要素は無視される。
         """
-        assert self.system == controller.system, "制御対象のシステムが制御器とシミュレータで一致しません。"
+        controller = self.controller
 
         x_series = np.zeros((len(self.time_series), len(self.initial_state)))
         x_series[0] = self.initial_state
@@ -113,102 +127,6 @@ class SystemSimulator():
 
         return x_series
 
-class VerticalDrivingArm(ControlSystem):
-    """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
-
-    def __init__(self, J = 0.3, M = 1.5, len = 0.7, μ = 0.1):
-        self.J = J
-        self.M = M
-        self.l = len
-        self.μ = μ
-
-    J : float64
-    """アームの回転軸の周りの慣性モーメント[kg⬝m²]"""
-
-    M : float64
-    """アームの質量[kg]"""
-
-    l : float64
-    """アームの重心までの長さ[m]"""
-
-    μ : float64
-    """粘性摩擦係数[Ns/m]"""
-
-    # θ : float64
-    # """アームの角度（垂直下向きから時計回り）[rad]"""
-
-    # dθ : float64
-    # """アームの角速度 [rad/s]"""
-
-    @property
-    def constants(self):
-        return {
-            "J": self.J,
-            "M": self.M,
-            "l": self.l,
-            "μ": self.μ,
-        }
-
-    @property
-    def state_dict(self):
-        return {
-            "θ" : 0, # アームの角度（垂直下向きから時計回り）[rad]
-            "dθ" : 1  # 角速度 [rad/s]
-        }
-
-    def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
-        J = self.J
-        M = self.M
-        l = self.l  # noqa: E741
-        μ = self.μ
-
-        θ = self.state_dict["θ"]
-        dθ = self.state_dict["dθ"]
-
-        new_θ = dθ
-        new_dθ = (- μ * dθ - M * G * l * np.sin(θ) + u) / J
-        return np.array([new_θ, new_dθ])
-
-
-class TwoTanks(ControlSystem):
-    """直列に結合した2つのタンク。「はじめての現代制御理論」の1.5節参照。
-    ただし、ここで示すモデルは既に線形化されている。
-    """
-
-    def __init__(self, C1 = 1.0, C2 = 2.0, R1 = 0.1, R2 = 0.1):
-        self.C1 = C1
-        self.C2 = C2
-        self.R1 = R1
-        self.R2 = R2
-
-    @property
-    def constants(self):
-        return {
-            "cross_sectional_area_1": self.C1, # タンク1の断面積[m²]
-            "cross_sectional_area_2": self.C2, # タンク2の断面積[m²]
-            "outlet_resistance_1": self.R1, # タンク1の出口抵抗 [s/m²]
-            "outlet_resistance_2": self.R2, # タンク2の出口抵抗 [s/m²]
-        }
-
-    @property
-    def state_dict(self):
-        return {
-            "water_level_1": 0, # タンク1の水位[m]
-            "water_level_2": 1  # タンク2の水位[m]
-        }
-
-    def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
-        C1 = self.constants["cross_sectional_area_1"]
-        C2 = self.constants["cross_sectional_area_2"]
-        R1 = self.constants["outlet_resistance_1"]
-        R2 = self.constants["outlet_resistance_2"]
-
-        h1 = self.state_dict["water_level_1"]
-        h2 = self.state_dict["water_level_2"]
-
-        dh1 = -(h1 / (R1 * C1)) + u / C1
-        dh2 = (h1 / (R1 * C2)) - (h2 / (R2 * C2))
-        return np.array([dh1, dh2])
 
 # class CartPole(ControlSystem):
 #     """倒立振子"""
@@ -231,8 +149,3 @@ class TwoTanks(ControlSystem):
 
 #     state_dict : dict[str, float]
 #     """状態の名前と、その `ControlSystem.state` におけるインデックスの対応。"""
-
-if __name__ == "__main__":
-    arm = VerticalDrivingArm()
-    print(arm.constants)
-    print(arm.state_dict)
