@@ -1,6 +1,6 @@
 import numpy as np
 
-from ControlSystems.typing import Time
+from ControlSystems.typing import Time, State, Input
 from ControlSystems.main import ControlSystem
 from numpy import float64
 from numpy.typing import NDArray
@@ -10,42 +10,40 @@ class TwoTanks(ControlSystem):
     ただし、ここで示すモデルは既に線形化されている。
     """
 
-    def __init__(self, C1 = 1.0, C2 = 2.0, R1 = 0.1, R2 = 0.1):
+    def __init__(self, C1 : float, C2 : float, R1 : float, R2 : float) -> None:
         self.C1 = C1
         self.C2 = C2
         self.R1 = R1
         self.R2 = R2
 
-    C1 : float64
+    C1 : float
     """タンク1の断面積[m²]"""
 
-    C2 : float64
+    C2 : float
     """タンク2の断面積[m²]"""
 
-    R1 : float64
+    R1 : float
     """タンク1の出口抵抗 [s/m²]"""
 
-    R2 : float64
+    R2 : float
     """タンク2の出口抵抗 [s/m²]"""
 
     @property
-    def constant_names(self):
+    def constant_names(self) -> list[str]:
         return ["C1", "C2", "R1", "R2"]
 
     @property
-    def state_names(self):
+    def state_names(self) -> list[str]:
         return ["h1", "h2"]
 
-    def ssmodel(self, _t : Time, x : NDArray[float64], u : float64) -> NDArray[float64]:
+    def ssmodel(self, t : Time, x : State, u : Input) -> State:
         C1 = self.C1
         C2 = self.C2
         R1 = self.R1
         R2 = self.R2
 
-        h1_index = self.state_names.index("h1")
-        h2_index = self.state_names.index("h2")
-        h1 = x[h1_index]
-        h2 = x[h2_index]
+        h1 = self.get_state(x, "h1")
+        h2 = self.get_state(x, "h2")
 
         dh1 = -(h1 / (R1 * C1)) + u / C1
         dh2 = (h1 / (R1 * C2)) - (h2 / (R2 * C2))

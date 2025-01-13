@@ -5,7 +5,11 @@
   "lean4.input.languages": [
     "python"
   ],
-  "mypy.runUsingActiveInterpreter": true,
+  // Pylanceの設定
   "python.analysis.typeCheckingMode": "standard",
+  "python.analysis.diagnosticSeverityOverrides": {
+    "reportAttributeAccessIssue": "none"
+  },
+  // MyPyの設定
   "mypy-type-checker.args": ["--disallow-untyped-defs"],
 }
