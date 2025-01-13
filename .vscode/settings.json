@@ -6,4 +6,6 @@
     "python"
   ],
   "mypy.runUsingActiveInterpreter": true,
+  "python.analysis.typeCheckingMode": "standard",
+  "mypy-type-checker.args": ["--disallow-untyped-defs"],
 }
