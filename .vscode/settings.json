@@ -11,5 +11,5 @@
     "reportAttributeAccessIssue": "none"
   },
   // MyPyの設定
-  "mypy-type-checker.args": ["--disallow-untyped-defs"],
+  "mypy-type-checker.args": ["--disallow-untyped-defs", "--allow-untyped-imports"],
 }

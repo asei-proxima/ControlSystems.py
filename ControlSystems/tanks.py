@@ -1,9 +1,10 @@
 import numpy as np
 
-from controlsystems.typedef import Time, State, Input
-from controlsystems.main import ControlSystem
 from numpy import float64
 from numpy.typing import NDArray
+
+from .typedef import Time, State, Input
+from .main import ControlSystem
 
 class TwoTanks(ControlSystem):
     """直列に結合した2つのタンク。「はじめての現代制御理論」の1.5節参照。

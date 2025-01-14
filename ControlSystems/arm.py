@@ -1,9 +1,10 @@
 import numpy as np
 
-from controlsystems.constants import G
-from controlsystems.typedef import Time, State, Input
-from controlsystems.main import ControlSystem
 from numpy import float64
+
+from .constants import G
+from .typedef import Time, State, Input
+from .main import ControlSystem
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
