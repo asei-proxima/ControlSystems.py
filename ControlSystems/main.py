@@ -9,7 +9,7 @@ from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from typing import Literal
 
-from ControlSystems.typing import Time, State, Input
+from ControlSystems.typedef import Time, State, Input
 
 """
 基本的で重要なクラスなどの定義が行われているファイル

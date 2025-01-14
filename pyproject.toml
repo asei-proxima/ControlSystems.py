@@ -10,6 +10,3 @@ dependencies = [
     "mypy>=1.14.1",
     "numpy>=2.2.1",
 ]
-
-[mypy]
-plugins = "numpy.typing.mypy_plugin"
