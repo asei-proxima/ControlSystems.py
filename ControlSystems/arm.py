@@ -1,8 +1,8 @@
 import numpy as np
 
-from ControlSystems.constants import G
-from ControlSystems.typedef import Time, State, Input
-from ControlSystems.main import ControlSystem
+from controlsystems.constants import G
+from controlsystems.typedef import Time, State, Input
+from controlsystems.main import ControlSystem
 from numpy import float64
 
 class VerticalDrivingArm(ControlSystem):
