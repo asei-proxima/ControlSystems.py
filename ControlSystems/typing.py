@@ -2,7 +2,6 @@
 from numpy.typing import NDArray
 from typing import TypeAlias
 from numpy import float64
-import numpy as np
 
 State : TypeAlias = NDArray
 """システムのある時刻での状態を全部集めたベクトル"""

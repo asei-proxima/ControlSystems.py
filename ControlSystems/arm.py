@@ -32,11 +32,18 @@ class VerticalDrivingArm(ControlSystem):
 
     @property
     def state_names(self) -> list[str]:
+        """状態リスト
+        * θ: アームの角度[rad]
+        * ω: アームの角速度[rad/s]
+        """
         return ["θ", "ω"]
 
     @property
     def input_names(self) -> list[str]:
-        return ["T"] # アームに与えるトルク
+        """入力リスト
+        * T: アームに与えるトルク[Nm]
+        """
+        return ["T"]
 
     def ssmodel(self, t : Time, x : State, u : Input) -> State:
         J = self.J
@@ -44,10 +51,8 @@ class VerticalDrivingArm(ControlSystem):
         l = self.l  # noqa: E741
         μ = self.μ
 
-        θ_index = self.state_names.index("θ")
-        ω_index = self.state_names.index("ω")
-        θ = x[θ_index]
-        ω = x[ω_index]
+        θ = self.get_state(x, "θ")
+        ω = self.get_state(x, "ω")
 
         dθ = ω
         dω = (- μ * ω - M * G * l * np.sin(θ) + u) / J

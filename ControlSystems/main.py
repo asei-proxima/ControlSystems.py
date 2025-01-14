@@ -67,7 +67,7 @@ class SystemController(ABC):
     system: ControlSystem
     """制御対象となるシステム"""
 
-    target : State
+    ref : State
     """制御の目標となる状態の値"""
 
     @abstractmethod
@@ -165,7 +165,6 @@ class SystemSimulator:
 
     def rk4(self, n: int, u: Input, x: State) -> State:
         """古典的ルンゲ・クッタ法によって「次の状態」を計算する。"""
-        print("rk4 is selected")
         t = self.time_series[n]
         Δt = self.time_interval
         r1 = self.system.ssmodel(t, x, u)
