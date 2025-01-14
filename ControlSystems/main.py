@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from numpy import float64
 from abc import abstractmethod, ABC
 from numpy.typing import NDArray
-from ControlSystems.typing import Time, State, Input
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
 from typing import Literal
+
+from ControlSystems.typing import Time, State, Input
 
 """
 基本的で重要なクラスなどの定義が行われているファイル
