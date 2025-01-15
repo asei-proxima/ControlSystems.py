@@ -113,10 +113,14 @@ class SimulationResult:
         y_series = self.get_data(y)
         time_series = self.time_series
 
-        ax.scatter(x=x_series, y=y_series, cmap="inferno", c=time_series)
+        scatter = ax.scatter(x=x_series, y=y_series, cmap="inferno", c=time_series)
         ax.set_xlabel(x)
         ax.set_ylabel(y)
         ax.set_title("Phase plot of the system")
+
+        # カラーバーを追加
+        cbar = fig.colorbar(scatter, ax=ax, orientation="vertical")
+        cbar.set_label("Time")  # カラーバーのラベルを設定
         return fig, ax
 
 
