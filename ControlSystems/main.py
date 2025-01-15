@@ -7,13 +7,23 @@ from abc import abstractmethod, ABC
 from numpy.typing import NDArray
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from typing import Literal
-
-from .typedef import Time, State, Input
+from typing import Literal, TypeAlias
 
 """
 基本的で重要なクラスなどの定義が行われているファイル
 """
+
+G = 9.80665
+"""重力加速度 [m/s^2]"""
+
+State : TypeAlias = NDArray
+"""システムのある時刻での状態を全部集めたベクトル"""
+
+Input : TypeAlias = NDArray
+"""ある時刻での制御入力を集めたベクトル"""
+
+Time : TypeAlias = float64
+"""時刻や時間を表す型。単位は秒[s]"""
 
 
 class ControlSystem(ABC):
