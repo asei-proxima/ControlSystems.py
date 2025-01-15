@@ -51,8 +51,10 @@ class VerticalDrivingArm(ControlSystem):
         θ = self.get_state(x, "θ")
         ω = self.get_state(x, "ω")
 
+        T = self.get_input(u, "T")
+
         dθ = ω
-        dω = (- μ * ω - M * G * l * np.sin(θ) + u) / J
+        dω = (- μ * ω - M * G * l * np.sin(θ) + T) / J
         return np.array([dθ, dω])
 
 

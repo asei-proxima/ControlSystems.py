@@ -131,7 +131,7 @@ class SystemSimulator:
         self,
         controller: SystemController,
         initial_state: State,
-        time_series: NDArray[Time],
+        time_series: NDArray,
     ):
         self.controller = controller
         self.system = controller.system
