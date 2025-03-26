@@ -3,89 +3,13 @@ import matplotlib.pyplot as plt
 
 from dataclasses import dataclass
 from numpy import float64
-from abc import abstractmethod, ABC
 from numpy.typing import NDArray
 from matplotlib.figure import Figure
 from matplotlib.axes import Axes
-from typing import Literal, TypeAlias
+from typing import Literal
 
-"""
-基本的で重要なクラスなどの定義が行われているファイル
-"""
-
-G = 9.80665
-"""重力加速度 [m/s^2]"""
-
-State : TypeAlias = NDArray
-"""システムのある時刻での状態を全部集めたベクトル"""
-
-Input : TypeAlias = NDArray
-"""ある時刻での制御入力を集めたベクトル"""
-
-Time : TypeAlias = float64
-"""時刻や時間を表す型。単位は秒[s]"""
-
-
-class ControlSystem(ABC):
-    """制御対象となるシステムを表すクラス"""
-
-    @property
-    @abstractmethod
-    def constant_names(self) -> list[str]:
-        """システムの定数の名前のリスト"""
-        pass
-
-    @property
-    def constants(self) -> dict[str, float64]:
-        """システムの定数の値の辞書"""
-        return {name: getattr(self, name) for name in self.constant_names}
-
-    @property
-    @abstractmethod
-    def state_names(self) -> list[str]:
-        """システムの状態の名前のリスト"""
-        pass
-
-    def get_state(self, x : State, name: str) -> float:
-        """与えられた名前の状態の値を取得する"""
-        index = self.state_names.index(name)
-        return x[index]
-
-    @property
-    @abstractmethod
-    def input_names(self) -> list[str]:
-        """システムの入力の名前のリスト"""
-        pass
-
-    def get_input(self, u : Input, name: str) -> float:
-        """与えられた名前の入力の値を取得する"""
-        index = self.input_names.index(name)
-        return u[index]
-
-    @abstractmethod
-    def ssmodel(self, t: Time, x: State, u: Input) -> State:
-        """状態空間モデル。時刻`t`とその時点での状態`x`と入力`u`を受け取って、状態`x`の微分`x'(t)`を返す。
-        * 多入力多出力系を考えている。
-        * ここでは一般的なシステムを考えているが、時不変なシステムなら引数`t`は使用しないはず。
-        * この時点では線形化しないように。ここでは正確なモデルを使用するべき。
-        """
-        pass
-
-
-class SystemController(ABC):
-    """状態から制御入力を決定する方法を表すクラス"""
-
-    system: ControlSystem
-    """制御対象となるシステム"""
-
-    ref : State
-    """制御の目標となる状態の値"""
-
-    @abstractmethod
-    def control(self, t: Time, x: State) -> Input:
-        """制御入力を計算する。"""
-        pass
-
+from .control_system import ControlSystem, State, Input, Time
+from .system_controller import SystemController
 
 @dataclass
 class SimulationResult:
@@ -94,7 +18,7 @@ class SimulationResult:
     system: ControlSystem
     """制御対象となるシステム"""
 
-    time_series: NDArray[Time]
+    time_series: NDArray[float64]
     """シミュレーションで使用した時刻の配列。各値の間隔は一定であることが期待される。"""
 
     result: NDArray[float64]

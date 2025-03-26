@@ -1,6 +1,9 @@
 import numpy as np
 
-from ControlSystems.main import ControlSystem, G, Time, State, Input
+from .control_system import ControlSystem, State, Input, Time
+
+G = 9.80665
+"""重力加速度 [m/s^2]"""
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""

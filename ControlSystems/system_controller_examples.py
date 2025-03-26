@@ -1,9 +1,11 @@
 import numpy as np
 
-from .main import ControlSystem, G, Time, State, Input, SystemController, SystemSimulator
-from .control_system_examples import VerticalDrivingArm
+from .system_controller import SystemController
+from .control_system import ControlSystem, State, Input, Time
 from numpy.typing import NDArray
 
+G = 9.80665
+"""重力加速度 [m/s^2]"""
 
 class TrivialController(SystemController):
     """常にゼロ入力を返すような自明なコントローラ"""

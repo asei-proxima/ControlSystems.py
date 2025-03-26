@@ -2,6 +2,7 @@ import numpy as np
 from numpy.typing import NDArray
 from typing import Literal, TypeAlias
 from abc import abstractmethod, ABC
+from numpy import float64
 
 State : TypeAlias = NDArray
 """システムのある時刻での状態を全部集めたベクトル"""
@@ -9,7 +10,7 @@ State : TypeAlias = NDArray
 Input : TypeAlias = NDArray
 """ある時刻での制御入力を集めたベクトル"""
 
-Time : TypeAlias = float
+Time : TypeAlias = float64
 """時刻や時間を表す型。単位は秒[s]"""
 
 class ControlSystem(ABC):
