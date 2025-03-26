@@ -5,7 +5,7 @@ from ControlSystems.main import ControlSystem, G, Time, State, Input
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
 
-    def __init__(self, J : float = 0.3, M : float = 1.5, l : float = 0.7, μ : float = 0.1) -> None:  # noqa: E741
+    def __init__(self, J : float, M : float, l : float, μ : float) -> None:  # noqa: E741
         self.J = J
         self.M = M
         self.l = l
