@@ -1,7 +1,7 @@
 import numpy as np
 
 from .main import ControlSystem, G, Time, State, Input, SystemController, SystemSimulator
-from .system_examples import VerticalDrivingArm
+from .control_system_examples import VerticalDrivingArm
 from numpy.typing import NDArray
 
 

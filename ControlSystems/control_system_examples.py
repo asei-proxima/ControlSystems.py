@@ -1,6 +1,6 @@
 import numpy as np
 
-from .main import ControlSystem, G, Time, State, Input
+from ControlSystems.main import ControlSystem, G, Time, State, Input
 
 class VerticalDrivingArm(ControlSystem):
     """垂直駆動アーム。「Pythonによる制御工学入門」の3.1.2参照。"""
